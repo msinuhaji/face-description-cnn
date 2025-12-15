@@ -601,6 +601,8 @@
 
         // Initialize chart
         const ctx = document.getElementById('lossChart').getContext('2d');
+        Chart.defaults.color = '#666666';
+        Chart.defaults.borderColor = '#1a1a1a';
         chart = new Chart(ctx, {
             type: 'line',
             data: {
@@ -612,9 +614,11 @@
                         borderColor: '#ffffff',
                         backgroundColor: 'rgba(255, 255, 255, 0.1)',
                         borderWidth: 2,
-                        tension: 0.3,
-                        pointRadius: 0,
-                        pointHoverRadius: 4
+                        tension: 0.4,
+                        pointRadius: 3,
+                        pointHoverRadius: 5,
+                        pointBackgroundColor: '#ffffff',
+                        fill: false
                     },
                     {
                         label: 'Validation Loss',
@@ -622,15 +626,21 @@
                         borderColor: '#666666',
                         backgroundColor: 'rgba(102, 102, 102, 0.1)',
                         borderWidth: 2,
-                        tension: 0.3,
-                        pointRadius: 0,
-                        pointHoverRadius: 4
+                        tension: 0.4,
+                        pointRadius: 3,
+                        pointHoverRadius: 5,
+                        pointBackgroundColor: '#666666',
+                        fill: false
                     }
                 ]
             },
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
+                interaction: {
+                    intersect: false,
+                    mode: 'index'
+                },
                 plugins: {
                     legend: {
                         display: true,
@@ -640,18 +650,53 @@
                             font: { family: 'Inter', size: 11, weight: '500' },
                             padding: 16,
                             usePointStyle: true,
-                            pointStyle: 'line'
+                            pointStyle: 'circle'
                         }
+                    },
+                    tooltip: {
+                        backgroundColor: '#1a1a1a',
+                        titleColor: '#ffffff',
+                        bodyColor: '#999999',
+                        borderColor: '#2a2a2a',
+                        borderWidth: 1,
+                        padding: 12,
+                        displayColors: true,
+                        titleFont: { family: 'Inter', size: 12, weight: '600' },
+                        bodyFont: { family: 'Inter', size: 11 }
                     }
                 },
                 scales: {
                     x: {
-                        grid: { color: '#1a1a1a', drawBorder: false },
-                        ticks: { color: '#666666', font: { family: 'Inter', size: 10 } }
+                        grid: { 
+                            color: '#1a1a1a', 
+                            drawBorder: false 
+                        },
+                        ticks: { 
+                            color: '#666666', 
+                            font: { family: 'Inter', size: 10 }
+                        },
+                        title: {
+                            display: true,
+                            text: 'Epoch',
+                            color: '#666666',
+                            font: { family: 'Inter', size: 10, weight: '500' }
+                        }
                     },
                     y: {
-                        grid: { color: '#1a1a1a', drawBorder: false },
-                        ticks: { color: '#666666', font: { family: 'Inter', size: 10 } }
+                        grid: { 
+                            color: '#1a1a1a', 
+                            drawBorder: false 
+                        },
+                        ticks: { 
+                            color: '#666666', 
+                            font: { family: 'Inter', size: 10 }
+                        },
+                        title: {
+                            display: true,
+                            text: 'Loss',
+                            color: '#666666',
+                            font: { family: 'Inter', size: 10, weight: '500' }
+                        }
                     }
                 }
             }
