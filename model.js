@@ -1,7 +1,8 @@
-import * as tf from 'https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest';
+import * as tf from '@tensorflow/tfjs-node';
 
 async function main() {
-  await tf.ready(); // ensure TF.js is fully loaded
+  // With tfjs-node tf.ready() is optional, but harmless to await.
+  await tf.ready();
   const x = tf.tensor([1, 2, 3]);
   x.print();
   console.log(x);
