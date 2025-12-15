@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Face Description CNN</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.11.0"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            padding: 40px;
+        }
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 2.5em;
+        }
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+        }
+        .section {
+            background: #f8f9fa;
+            border-radius: 12px;
+            padding: 25px;
+            margin-bottom: 20px;
+            border: 2px solid #e9ecef;
+        }
+        h2 {
+            color: #495057;
+            margin-bottom: 15px;
+            font-size: 1.5em;
+        }
+        .file-input {
+            display: block;
+            width: 100%;
+            padding: 12px;
+            margin-bottom: 15px;
+            border: 2px dashed #ced4da;
+            border-radius: 8px;
+            background: white;
+            cursor: pointer;
+        }
+        .file-input:hover {
+            border-color: #667eea;
+            background: #f0f4ff;
+        }
+        button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        button:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+        button:disabled {
+            background: #adb5bd;
+            cursor: not-allowed;
+        }
+        .status {
+            margin-top: 15px;
+            padding: 12px;
+            background: #e7f5ff;
+            border-left: 4px solid #339af0;
+            border-radius: 4px;
+            color: #1864ab;
+        }
+        .results {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-top: 20px;
+        }
+        .preview-img {
+            width: 100%;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        .prediction-card {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        .prediction-label {
+            color: #868e96;
+            font-size: 14px;
+            margin-bottom: 5px;
+        }
+        .prediction-value {
+            color: #667eea;
+            font-size: 24px;
+            font-weight: bold;
+        }
+        .instructions {
+            background: #fff3cd;
+            border: 1px solid #ffc107;
+            border-radius: 8px;
+            padding: 15px;
+            margin-top: 20px;
+        }
+        .instructions h3 {
+            color: #856404;
+            margin-bottom: 10px;
+        }
+        .instructions ol {
+            color: #856404;
+            margin-left: 20px;
+        }
+        .instructions li {
+            margin-bottom: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧠 Face Description CNN</h1>
+        <p class="subtitle">AI-powered face analysis using TensorFlow.js</p>
+
+        <!-- Training Section -->
+        <div class="section">
+            <h2>1️⃣ Train Model</h2>
+            <p style="color: #6c757d; margin-bottom: 15px;">Select UTK Face dataset images (format: age_gender_race_date.jpg)</p>
+            <input type="file" id="trainFiles" class="file-input" multiple accept="image/*">
+            <button onclick="trainModel()" id="trainBtn">🚀 Start Training</button>
+            <div id="trainStatus"></div>
+        </div>
+
+        <!-- Prediction Section -->
+        <div class="section">
+            <h2>2️⃣ Predict Face Attributes</h2>
+            <input type="file" id="testFile" class="file-input" accept="image/*">
+            <button onclick="predictFace()" id="predictBtn" disabled>🔮 Predict</button>
+            <div id="results"></div>
+        </div>
+
+        <!-- Instructions -->
+        <div class="instructions">
+            <h3>📋 Quick Start:</h3>
+            <ol>
+                <li>Download UTK Face dataset images</li>
+                <li>Select 50-200 training images above</li>
+                <li>Wait for training to complete (~5 mins)</li>
+                <li>Upload any face image to get predictions!</li>
+            </ol>
+        </div>
+    </div>
+
+    <script>
+        let model = null;
+
+        // Build CNN model
+        function buildModel() {
+            const m = tf.sequential();
+            
+            // Conv block 1
+            m.add(tf.layers.conv2d({
+                inputShape: [128, 128, 3],
+                filters: 32,
+                kernelSize: 3,
+                activation: 'relu',
+                padding: 'same'
+            }));
+            m.add(tf.layers.maxPooling2d({ poolSize: 2 }));
+            
+            // Conv block 2
+            m.add(tf.layers.conv2d({
+                filters: 64,
+                kernelSize: 3,
+                activation: 'relu',
+                padding: 'same'
+            }));
+            m.add(tf.layers.maxPooling2d({ poolSize: 2 }));
+            
+            // Conv block 3
+            m.add(tf.layers.conv2d({
+                filters: 128,
+                kernelSize: 3,
+                activation: 'relu',
+                padding: 'same'
+            }));
+            m.add(tf.layers.maxPooling2d({ poolSize: 2 }));
+            
+            // Dense layers
+            m.add(tf.layers.flatten());
+            m.add(tf.layers.dropout({ rate: 0.5 }));
+            m.add(tf.layers.dense({ units: 256, activation: 'relu' }));
+            m.add(tf.layers.dropout({ rate: 0.3 }));
+            m.add(tf.layers.dense({ units: 8 }));
+            
+            m.compile({
+                optimizer: tf.train.adam(0.001),
+                loss: 'meanSquaredError',
+                metrics: ['mae']
+            });
+            
+            return m;
+        }
+
+        // Parse UTK filename
+        function parseFilename(filename) {
+            const parts = filename.split('_');
+            if (parts.length < 3) return null;
+            
+            const age = parseInt(parts[0]);
+            const gender = parseInt(parts[1]);
+            const race = parseInt(parts[2]);
+            
+            if (isNaN(age) || isNaN(gender) || isNaN(race)) return null;
+            return { age, gender, race };
+        }
+
+        // Preprocess image
+        async function preprocessImage(file) {
+            return new Promise((resolve) => {
+                const img = new Image();
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d');
+                
+                img.onload = () => {
+                    canvas.width = 128;
+                    canvas.height = 128;
+                    ctx.drawImage(img, 0, 0, 128, 128);
+                    
+                    const tensor = tf.browser.fromPixels(canvas)
+                        .toFloat()
+                        .div(255.0)
+                        .expandDims(0);
+                    
+                    resolve(tensor);
+                };
+                
+                img.src = URL.createObjectURL(file);
+            });
+        }
+
+        // Create target tensor
+        function createTarget(labels) {
+            const ageNorm = labels.age / 100;
+            const gender = labels.gender === 0 ? [1, 0] : [0, 1];
+            const race = [0, 0, 0, 0, 0];
+            race[labels.race] = 1;
+            
+            return tf.tensor2d([[ageNorm, ...gender, ...race]]);
+        }
+
+        // Train model
+        async function trainModel() {
+            const files = document.getElementById('trainFiles').files;
+            if (files.length === 0) {
+                alert('Please select training images!');
+                return;
+            }
+
+            const trainBtn = document.getElementById('trainBtn');
+            const status = document.getElementById('trainStatus');
+            trainBtn.disabled = true;
+            trainBtn.textContent = '⏳ Training...';
+            
+            status.innerHTML = '<div class="status">Preparing data...</div>';
+            
+            const newModel = buildModel();
+            const trainData = [];
+            const trainLabels = [];
+            
+            // Load images (limit to 100 for speed)
+            for (let i = 0; i < Math.min(files.length, 100); i++) {
+                const file = files[i];
+                const labels = parseFilename(file.name);
+                
+                if (!labels) continue;
+                
+                const imgTensor = await preprocessImage(file);
+                const targetTensor = createTarget(labels);
+                
+                trainData.push(imgTensor);
+                trainLabels.push(targetTensor);
+                
+                if (i % 10 === 0) {
+                    status.innerHTML = `<div class="status">Loading image ${i + 1}/${Math.min(files.length, 100)}...</div>`;
+                }
+            }
+            
+            if (trainData.length === 0) {
+                alert('No valid UTK Face images found! Check filename format.');
+                trainBtn.disabled = false;
+                trainBtn.textContent = '🚀 Start Training';
+                return;
+            }
+
+            status.innerHTML = `<div class="status">Training on ${trainData.length} images...</div>`;
+            
+            const xs = tf.concat(trainData);
+            const ys = tf.concat(trainLabels);
+            
+            trainData.forEach(t => t.dispose());
+            trainLabels.forEach(t => t.dispose());
+
+            await newModel.fit(xs, ys, {
+                epochs: 20,
+                batchSize: 32,
+                validationSplit: 0.2,
+                callbacks: {
+                    onEpochEnd: (epoch, logs) => {
+                        status.innerHTML = `<div class="status">Epoch ${epoch + 1}/20 | Loss: ${logs.loss.toFixed(4)}</div>`;
+                    }
+                }
+            });
+
+            xs.dispose();
+            ys.dispose();
+            
+            model = newModel;
+            trainBtn.textContent = '✅ Training Complete';
+            document.getElementById('predictBtn').disabled = false;
+            status.innerHTML = '<div class="status">✅ Model trained successfully!</div>';
+        }
+
+        // Predict face
+        async function predictFace() {
+            if (!model) {
+                alert('Please train the model first!');
+                return;
+            }
+
+            const file = document.getElementById('testFile').files[0];
+            if (!file) {
+                alert('Please select an image!');
+                return;
+            }
+
+            const imgTensor = await preprocessImage(file);
+            const pred = model.predict(imgTensor);
+            const values = await pred.data();
+            
+            const age = Math.round(values[0] * 100);
+            const gender = values[1] > values[2] ? 'Male' : 'Female';
+            const raceIdx = values.slice(3, 8).indexOf(Math.max(...values.slice(3, 8)));
+            const races = ['White', 'Black', 'Asian', 'Indian', 'Others'];
+            const race = races[raceIdx];
+            
+            // Create image preview
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                document.getElementById('results').innerHTML = `
+                    <div class="results">
+                        <div>
+                            <img src="${e.target.result}" class="preview-img" alt="Input face">
+                        </div>
+                        <div>
+                            <div class="prediction-card">
+                                <div class="prediction-label">Age</div>
+                                <div class="prediction-value">${age} years</div>
+                            </div>
+                            <div class="prediction-card">
+                                <div class="prediction-label">Gender</div>
+                                <div class="prediction-value">${gender}</div>
+                            </div>
+                            <div class="prediction-card">
+                                <div class="prediction-label">Ethnicity</div>
+                                <div class="prediction-value">${race}</div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            };
+            reader.readAsDataURL(file);
+            
+            imgTensor.dispose();
+            pred.dispose();
+        }
+    </script>
+</body>
+</html>
