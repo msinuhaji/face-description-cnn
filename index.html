@@ -3,381 +3,1008 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Face Description CNN</title>
-    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.11.0"></script>
+    <title>Face Attribute CNN</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tensorflow/4.11.0/tf.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            font-family: 'Inter', -apple-system, sans-serif;
+            background: #0a0a0a;
+            color: #e0e0e0;
             min-height: 100vh;
-            padding: 20px;
+            padding: 0;
+            line-height: 1.5;
+            letter-spacing: -0.01em;
         }
         .container {
-            max-width: 900px;
+            max-width: 1600px;
             margin: 0 auto;
-            background: white;
-            border-radius: 20px;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
-            padding: 40px;
+            padding: 40px 32px;
+        }
+        .header {
+            margin-bottom: 48px;
+            border-bottom: 1px solid #1a1a1a;
+            padding-bottom: 32px;
+        }
+        .header-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
         }
         h1 {
-            color: #333;
-            margin-bottom: 10px;
-            font-size: 2.5em;
+            font-size: 32px;
+            font-weight: 600;
+            color: #ffffff;
+            letter-spacing: -0.03em;
+            margin-bottom: 8px;
         }
         .subtitle {
-            color: #666;
-            margin-bottom: 30px;
+            color: #666666;
+            font-size: 14px;
+            font-weight: 400;
+            letter-spacing: -0.01em;
         }
-        .section {
-            background: #f8f9fa;
+        .status-badge {
+            padding: 6px 14px;
+            background: #0f1f0f;
+            border: 1px solid #1a331a;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 500;
+            color: #4ade80;
+            letter-spacing: 0.02em;
+            text-transform: uppercase;
+        }
+        .status-badge.inactive {
+            background: #1a1a1a;
+            border-color: #2a2a2a;
+            color: #666666;
+        }
+        .grid {
+            display: grid;
+            grid-template-columns: 480px 1fr;
+            gap: 32px;
+            margin-bottom: 32px;
+        }
+        @media (max-width: 1200px) {
+            .grid { grid-template-columns: 1fr; }
+        }
+        .panel {
+            background: #111111;
+            border: 1px solid #1a1a1a;
             border-radius: 12px;
-            padding: 25px;
-            margin-bottom: 20px;
-            border: 2px solid #e9ecef;
+            padding: 32px;
+            position: relative;
         }
-        h2 {
-            color: #495057;
-            margin-bottom: 15px;
-            font-size: 1.5em;
+        .panel-header {
+            font-size: 11px;
+            font-weight: 600;
+            color: #666666;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            margin-bottom: 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
         }
-        .file-input {
+        .panel-header-badge {
+            background: #1a1a1a;
+            padding: 4px 10px;
+            border-radius: 4px;
+            font-size: 10px;
+            color: #999999;
+            letter-spacing: 0.05em;
+        }
+        .field {
+            margin-bottom: 24px;
+        }
+        .field-label {
             display: block;
-            width: 100%;
-            padding: 12px;
-            margin-bottom: 15px;
-            border: 2px dashed #ced4da;
-            border-radius: 8px;
-            background: white;
-            cursor: pointer;
+            margin-bottom: 10px;
+            color: #999999;
+            font-size: 13px;
+            font-weight: 500;
+            letter-spacing: -0.01em;
         }
-        .file-input:hover {
-            border-color: #667eea;
-            background: #f0f4ff;
+        .field-sublabel {
+            display: block;
+            color: #4a4a4a;
+            font-size: 11px;
+            margin-top: 4px;
+            font-weight: 400;
+        }
+        input[type="number"], select {
+            width: 100%;
+            padding: 12px 14px;
+            border: 1px solid #1a1a1a;
+            border-radius: 8px;
+            font-size: 14px;
+            background: #0a0a0a;
+            color: #e0e0e0;
+            font-family: 'Inter', sans-serif;
+            transition: all 0.2s;
+            font-weight: 500;
+        }
+        input[type="number"]:focus, select:focus {
+            outline: none;
+            border-color: #2a2a2a;
+            background: #121212;
+        }
+        input[type="number"]:hover, select:hover {
+            border-color: #2a2a2a;
+        }
+        .file-input-zone {
+            width: 100%;
+            padding: 32px 20px;
+            border: 1.5px dashed #1a1a1a;
+            border-radius: 8px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s;
+            background: #0a0a0a;
+            position: relative;
+            display: block;
+        }
+        .file-input-zone:hover {
+            border-color: #2a2a2a;
+            background: #0f0f0f;
+        }
+        .file-input-zone.active {
+            border-color: #3a3a3a;
+            background: #121212;
+        }
+        .file-input-text {
+            font-size: 13px;
+            color: #666666;
+            font-weight: 500;
+            pointer-events: none;
+        }
+        .file-input-subtext {
+            font-size: 11px;
+            color: #4a4a4a;
+            margin-top: 6px;
+            pointer-events: none;
+        }
+        .btn-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 24px;
         }
         button {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
+            background: #ffffff;
+            color: #0a0a0a;
             border: none;
-            padding: 12px 30px;
-            border-radius: 8px;
-            font-size: 16px;
+            padding: 12px 24px;
+            border-radius: 6px;
+            font-size: 13px;
             font-weight: 600;
             cursor: pointer;
-            transition: transform 0.2s, box-shadow 0.2s;
+            transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+            font-family: 'Inter', sans-serif;
+            letter-spacing: -0.01em;
+            flex: 1;
+            position: relative;
+            overflow: hidden;
+        }
+        button::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, rgba(255,255,255,0.2), transparent);
+            opacity: 0;
+            transition: opacity 0.15s;
+        }
+        button:hover:not(:disabled)::before {
+            opacity: 1;
         }
         button:hover:not(:disabled) {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+            background: #ffffff;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(255, 255, 255, 0.15);
+        }
+        button:active:not(:disabled) {
+            transform: translateY(0);
+            box-shadow: 0 1px 4px rgba(255, 255, 255, 0.1);
         }
         button:disabled {
-            background: #adb5bd;
+            background: #1a1a1a;
+            color: #4a4a4a;
             cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
         }
-        .status {
-            margin-top: 15px;
-            padding: 12px;
-            background: #e7f5ff;
-            border-left: 4px solid #339af0;
-            border-radius: 4px;
-            color: #1864ab;
+        button.secondary {
+            background: transparent;
+            color: #e0e0e0;
+            border: 1px solid #2a2a2a;
+            box-shadow: none;
         }
-        .results {
+        button.secondary::before {
+            background: linear-gradient(135deg, rgba(255,255,255,0.05), transparent);
+        }
+        button.secondary:hover:not(:disabled) {
+            background: #1a1a1a;
+            border-color: #3a3a3a;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        }
+        button.secondary:active:not(:disabled) {
+            background: #0f0f0f;
+            box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
+        }
+        .metrics-grid {
             display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 20px;
-            margin-top: 20px;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px;
+            margin-bottom: 24px;
         }
-        .preview-img {
+        .metric-card {
+            background: #0a0a0a;
+            border: 1px solid #1a1a1a;
+            border-radius: 8px;
+            padding: 16px;
+        }
+        .metric-label {
+            font-size: 10px;
+            color: #666666;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            margin-bottom: 8px;
+            font-weight: 600;
+        }
+        .metric-value {
+            font-size: 24px;
+            font-weight: 700;
+            color: #ffffff;
+            letter-spacing: -0.02em;
+        }
+        .metric-unit {
+            font-size: 14px;
+            color: #666666;
+            font-weight: 500;
+            margin-left: 4px;
+        }
+        .chart-container {
+            background: #0a0a0a;
+            border: 1px solid #1a1a1a;
+            border-radius: 8px;
+            padding: 20px;
+            height: 280px;
+            margin-bottom: 24px;
+        }
+        .progress-container {
+            margin-top: 24px;
+        }
+        .progress-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 12px;
+        }
+        .progress-label {
+            font-size: 12px;
+            color: #999999;
+            font-weight: 500;
+        }
+        .progress-percent {
+            font-size: 12px;
+            color: #ffffff;
+            font-weight: 600;
+            font-feature-settings: 'tnum';
+        }
+        .progress-bar {
+            background: #1a1a1a;
+            border-radius: 4px;
+            height: 4px;
+            overflow: hidden;
+        }
+        .progress-fill {
+            height: 100%;
+            background: #ffffff;
+            transition: width 0.3s;
+            border-radius: 4px;
+        }
+        .result-container {
+            margin-top: 32px;
+        }
+        .result-grid {
+            display: grid;
+            grid-template-columns: 320px 1fr;
+            gap: 24px;
+        }
+        .result-image {
             width: 100%;
-            border-radius: 12px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            border-radius: 8px;
+            background: #0a0a0a;
+            border: 1px solid #1a1a1a;
+        }
+        .predictions {
+            display: grid;
+            gap: 12px;
         }
         .prediction-card {
-            background: white;
-            padding: 15px;
+            background: #0a0a0a;
+            border: 1px solid #1a1a1a;
             border-radius: 8px;
-            margin-bottom: 10px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            padding: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
         }
         .prediction-label {
-            color: #868e96;
-            font-size: 14px;
-            margin-bottom: 5px;
+            font-size: 10px;
+            color: #666666;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            font-weight: 600;
+            margin-bottom: 6px;
         }
         .prediction-value {
-            color: #667eea;
-            font-size: 24px;
-            font-weight: bold;
+            font-size: 28px;
+            font-weight: 700;
+            color: #ffffff;
+            letter-spacing: -0.02em;
         }
-        .instructions {
-            background: #fff3cd;
-            border: 1px solid #ffc107;
+        .prediction-confidence {
+            font-size: 11px;
+            color: #4a4a4a;
+            margin-top: 6px;
+            font-weight: 500;
+        }
+        .confidence-bar {
+            width: 80px;
+            height: 80px;
+            position: relative;
+        }
+        .confidence-circle {
+            fill: none;
+            stroke: #1a1a1a;
+            stroke-width: 6;
+        }
+        .confidence-circle-fill {
+            fill: none;
+            stroke: #ffffff;
+            stroke-width: 6;
+            stroke-linecap: round;
+            transform: rotate(-90deg);
+            transform-origin: center;
+            transition: stroke-dashoffset 0.5s;
+        }
+        .confidence-text {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 16px;
+            font-weight: 700;
+            color: #ffffff;
+        }
+        .alert {
+            padding: 14px 18px;
+            background: #0f1f0f;
+            border: 1px solid #1a331a;
             border-radius: 8px;
-            padding: 15px;
-            margin-top: 20px;
+            margin-bottom: 24px;
+            font-size: 12px;
+            color: #4ade80;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 10px;
         }
-        .instructions h3 {
-            color: #856404;
-            margin-bottom: 10px;
+        .alert-warning {
+            background: #1f1f0f;
+            border-color: #33331a;
+            color: #fbbf24;
         }
-        .instructions ol {
-            color: #856404;
-            margin-left: 20px;
+        .alert-icon {
+            font-size: 14px;
         }
-        .instructions li {
-            margin-bottom: 5px;
+        .info-footer {
+            background: #0a0a0a;
+            border: 1px solid #1a1a1a;
+            border-radius: 12px;
+            padding: 24px 28px;
+            font-size: 12px;
+            color: #666666;
+            line-height: 1.8;
+            position: relative;
+        }
+        .info-footer strong {
+            color: #999999;
+            font-weight: 600;
+        }
+        .training-gif-container {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            background: #111111;
+            border: 1px solid #1a1a1a;
+            border-radius: 12px;
+            padding: 16px;
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            gap: 12px;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            animation: slideIn 0.3s ease;
+        }
+        .training-gif-container.active {
+            display: flex;
+        }
+        @keyframes slideIn {
+            from {
+                transform: translateX(100px);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+        .training-gif {
+            width: 200px;
+            height: 200px;
+            border-radius: 8px;
+            object-fit: cover;
+        }
+        .training-gif-label {
+            font-size: 11px;
+            font-weight: 600;
+            color: #999999;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+        }
+        input[type="file"] {
+            display: none;
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>🧠 Face Description CNN</h1>
-        <p class="subtitle">AI-powered face analysis using TensorFlow.js</p>
-
-        <!-- Training Section -->
-        <div class="section">
-            <h2>1️⃣ Train Model</h2>
-            <p style="color: #6c757d; margin-bottom: 15px;">Select UTK Face dataset images (format: age_gender_race_date.jpg)</p>
-            <input type="file" id="trainFiles" class="file-input" multiple accept="image/*">
-            <button onclick="trainModel()" id="trainBtn">🚀 Start Training</button>
-            <div id="trainStatus"></div>
+        <div class="header">
+            <div class="header-content">
+                <div>
+                    <h1>Face Attribute CNN</h1>
+                    <p class="subtitle">Neural network for age, gender, and ethnicity prediction</p>
+                </div>
+                <div class="status-badge" id="modelStatus">Model Inactive</div>
+            </div>
         </div>
 
-        <!-- Prediction Section -->
-        <div class="section">
-            <h2>2️⃣ Predict Face Attributes</h2>
-            <input type="file" id="testFile" class="file-input" accept="image/*">
-            <button onclick="predictFace()" id="predictBtn" disabled>🔮 Predict</button>
-            <div id="results"></div>
+        <div class="grid">
+            <div class="panel">
+                <div class="panel-header">
+                    Training Configuration
+                    <span class="panel-header-badge">UTK Dataset</span>
+                </div>
+                
+                <div class="alert alert-warning">
+                    <span class="alert-icon">⚠</span>
+                    <span>Optimal performance: 500-2000 training images</span>
+                </div>
+                
+                <div class="field">
+                    <label class="field-label">
+                        Image Resolution
+                        <span class="field-sublabel">Higher resolution = Better accuracy, slower training</span>
+                    </label>
+                    <select id="imgSize">
+                        <option value="32">32 × 32 px</option>
+                        <option value="48">48 × 48 px</option>
+                        <option value="64" selected>64 × 64 px</option>
+                        <option value="96">96 × 96 px</option>
+                        <option value="128">128 × 128 px</option>
+                    </select>
+                </div>
+                
+                <div class="metrics-grid">
+                    <div class="metric-card">
+                        <div class="metric-label">Max Images</div>
+                        <input type="number" id="maxImg" value="2000" min="50" max="10000" style="background:transparent;border:none;padding:0;font-size:24px;font-weight:700;color:#fff;height:auto;">
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-label">Epochs</div>
+                        <input type="number" id="epochs" value="30" min="5" max="150" style="background:transparent;border:none;padding:0;font-size:24px;font-weight:700;color:#fff;height:auto;">
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-label">Batch Size</div>
+                        <div class="metric-value">32</div>
+                    </div>
+                </div>
+                
+                <div class="field">
+                    <label class="field-label">Training Dataset</label>
+                    <label for="trainFiles" class="file-input-zone">
+                        <div class="file-input-text" id="trainFileText">Select Folder</div>
+                        <div class="file-input-subtext">Format: age_gender_race_date.jpg</div>
+                    </label>
+                    <input type="file" id="trainFiles" webkitdirectory directory multiple>
+                </div>
+                
+                <div class="btn-group">
+                    <button onclick="train()" id="trainBtn">Start Training</button>
+                    <button onclick="saveModel()" id="saveBtn" disabled class="secondary">Save</button>
+                    <button onclick="document.getElementById('loadFile').click()" class="secondary">Load</button>
+                </div>
+                <input type="file" id="loadFile" accept=".json" onchange="loadModel()">
+                
+                <div id="progress"></div>
+            </div>
+
+            <div class="panel">
+                <div class="panel-header">
+                    Training Metrics
+                    <span class="panel-header-badge">Real-time</span>
+                </div>
+                
+                <div class="chart-container">
+                    <canvas id="lossChart"></canvas>
+                </div>
+                
+                <div class="metrics-grid">
+                    <div class="metric-card">
+                        <div class="metric-label">Current Epoch</div>
+                        <div class="metric-value" id="currentEpoch">0<span class="metric-unit">/ 0</span></div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-label">Age MAE</div>
+                        <div class="metric-value" id="ageMae">—</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-label">Total Loss</div>
+                        <div class="metric-value" id="trainLoss">—</div>
+                    </div>
+                </div>
+
+                <div class="panel-header" style="margin-top:32px">
+                    Prediction
+                </div>
+                
+                <div class="field">
+                    <label for="testFile" class="file-input-zone">
+                        <div class="file-input-text" id="testFileText">Upload Image</div>
+                        <div class="file-input-subtext">Analyze facial attributes</div>
+                    </label>
+                    <input type="file" id="testFile" accept="image/*">
+                </div>
+                
+                <button onclick="predict()" id="predBtn" disabled style="width:100%;margin-top:16px">Analyze Face</button>
+                
+                <div id="results"></div>
+            </div>
         </div>
 
-        <!-- Instructions -->
-        <div class="instructions">
-            <h3>📋 Quick Start:</h3>
-            <ol>
-                <li>Download UTK Face dataset images</li>
-                <li>Select 50-200 training images above</li>
-                <li>Wait for training to complete (~5 mins)</li>
-                <li>Upload any face image to get predictions!</li>
-            </ol>
+        <div class="info-footer">
+            <strong>Quick Start:</strong> Download UTK Face dataset → Configure resolution and parameters → Select dataset folder → Train model → Save for reuse → Upload images for predictions
+        </div>
+
+        <div class="training-gif-container" id="trainingGif">
+            <img class="training-gif" id="gifImage" src="" alt="Training">
+            <div class="training-gif-label">Training, Please Wait...</div>
         </div>
     </div>
 
     <script>
         let model = null;
+        let imgSize = 64;
+        let chart = null;
+        let lossData = { train: [], val: [] };
 
-        // Build CNN model
-        function buildModel() {
+        tf.setBackend('webgl').then(() => tf.ready());
+
+        // Initialize chart
+        const ctx = document.getElementById('lossChart').getContext('2d');
+        chart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: [],
+                datasets: [
+                    {
+                        label: 'Training Loss',
+                        data: [],
+                        borderColor: '#ffffff',
+                        backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                        borderWidth: 2,
+                        tension: 0.3,
+                        pointRadius: 0,
+                        pointHoverRadius: 4
+                    },
+                    {
+                        label: 'Validation Loss',
+                        data: [],
+                        borderColor: '#666666',
+                        backgroundColor: 'rgba(102, 102, 102, 0.1)',
+                        borderWidth: 2,
+                        tension: 0.3,
+                        pointRadius: 0,
+                        pointHoverRadius: 4
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: true,
+                        position: 'top',
+                        labels: {
+                            color: '#666666',
+                            font: { family: 'Inter', size: 11, weight: '500' },
+                            padding: 16,
+                            usePointStyle: true,
+                            pointStyle: 'line'
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        grid: { color: '#1a1a1a', drawBorder: false },
+                        ticks: { color: '#666666', font: { family: 'Inter', size: 10 } }
+                    },
+                    y: {
+                        grid: { color: '#1a1a1a', drawBorder: false },
+                        ticks: { color: '#666666', font: { family: 'Inter', size: 10 } }
+                    }
+                }
+            }
+        });
+
+        // File input handlers
+        document.getElementById('trainFiles').addEventListener('change', (e) => {
+            const count = e.target.files.length;
+            document.getElementById('trainFileText').textContent = `${count} files selected`;
+            document.getElementById('trainFileText').parentElement.classList.add('active');
+        });
+
+        document.getElementById('testFile').addEventListener('change', (e) => {
+            const name = e.target.files[0]?.name || 'Upload Image';
+            document.getElementById('testFileText').textContent = name.length > 30 ? name.substring(0, 27) + '...' : name;
+            document.getElementById('testFileText').parentElement.classList.add('active');
+        });
+
+        function buildModel(size) {
             const m = tf.sequential();
-            
-            // Conv block 1
-            m.add(tf.layers.conv2d({
-                inputShape: [128, 128, 3],
-                filters: 32,
-                kernelSize: 3,
-                activation: 'relu',
-                padding: 'same'
-            }));
+            m.add(tf.layers.conv2d({ inputShape: [size, size, 3], filters: 32, kernelSize: 3, activation: 'relu', padding: 'same' }));
+            m.add(tf.layers.batchNormalization());
             m.add(tf.layers.maxPooling2d({ poolSize: 2 }));
             
-            // Conv block 2
-            m.add(tf.layers.conv2d({
-                filters: 64,
-                kernelSize: 3,
-                activation: 'relu',
-                padding: 'same'
-            }));
+            m.add(tf.layers.conv2d({ filters: 64, kernelSize: 3, activation: 'relu', padding: 'same' }));
+            m.add(tf.layers.batchNormalization());
             m.add(tf.layers.maxPooling2d({ poolSize: 2 }));
             
-            // Conv block 3
-            m.add(tf.layers.conv2d({
-                filters: 128,
-                kernelSize: 3,
-                activation: 'relu',
-                padding: 'same'
-            }));
+            m.add(tf.layers.conv2d({ filters: 128, kernelSize: 3, activation: 'relu', padding: 'same' }));
+            m.add(tf.layers.batchNormalization());
             m.add(tf.layers.maxPooling2d({ poolSize: 2 }));
             
-            // Dense layers
+            m.add(tf.layers.conv2d({ filters: 256, kernelSize: 3, activation: 'relu', padding: 'same' }));
+            m.add(tf.layers.batchNormalization());
+            m.add(tf.layers.maxPooling2d({ poolSize: 2 }));
+            
             m.add(tf.layers.flatten());
             m.add(tf.layers.dropout({ rate: 0.5 }));
+            m.add(tf.layers.dense({ units: 512, activation: 'relu' }));
+            m.add(tf.layers.batchNormalization());
+            m.add(tf.layers.dropout({ rate: 0.4 }));
             m.add(tf.layers.dense({ units: 256, activation: 'relu' }));
             m.add(tf.layers.dropout({ rate: 0.3 }));
             m.add(tf.layers.dense({ units: 8 }));
             
             m.compile({
-                optimizer: tf.train.adam(0.001),
-                loss: 'meanSquaredError',
+                optimizer: tf.train.adam(0.0003),
+                loss: (yTrue, yPred) => tf.tidy(() => {
+                    const ageLoss = tf.losses.meanSquaredError(yTrue.slice([0,0],[-1,1]), yPred.slice([0,0],[-1,1]));
+                    const genderLoss = tf.losses.softmaxCrossEntropy(yTrue.slice([0,1],[-1,2]), yPred.slice([0,1],[-1,2]));
+                    const raceLoss = tf.losses.softmaxCrossEntropy(yTrue.slice([0,3],[-1,5]), yPred.slice([0,3],[-1,5]));
+                    return ageLoss.mul(10).add(genderLoss).add(raceLoss).div(12);
+                }),
                 metrics: ['mae']
             });
-            
             return m;
         }
 
-        // Parse UTK filename
-        function parseFilename(filename) {
-            const parts = filename.split('_');
-            if (parts.length < 3) return null;
-            
-            const age = parseInt(parts[0]);
-            const gender = parseInt(parts[1]);
-            const race = parseInt(parts[2]);
-            
+        function parseLabels(name) {
+            const p = name.split('_');
+            if (p.length < 3) return null;
+            const age = parseInt(p[0]), gender = parseInt(p[1]), race = parseInt(p[2]);
             if (isNaN(age) || isNaN(gender) || isNaN(race)) return null;
             return { age, gender, race };
         }
 
-        // Preprocess image
-        async function preprocessImage(file) {
-            return new Promise((resolve) => {
+        async function loadImg(file, size) {
+            return new Promise(resolve => {
                 const img = new Image();
-                const canvas = document.createElement('canvas');
-                const ctx = canvas.getContext('2d');
-                
                 img.onload = () => {
-                    canvas.width = 128;
-                    canvas.height = 128;
-                    ctx.drawImage(img, 0, 0, 128, 128);
-                    
-                    const tensor = tf.browser.fromPixels(canvas)
-                        .toFloat()
-                        .div(255.0)
-                        .expandDims(0);
-                    
+                    const canvas = document.createElement('canvas');
+                    canvas.width = canvas.height = size;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0, size, size);
+                    const tensor = tf.browser.fromPixels(canvas).toFloat().div(255);
+                    URL.revokeObjectURL(img.src);
                     resolve(tensor);
                 };
-                
                 img.src = URL.createObjectURL(file);
             });
         }
 
-        // Create target tensor
-        function createTarget(labels) {
-            const ageNorm = labels.age / 100;
-            const gender = labels.gender === 0 ? [1, 0] : [0, 1];
-            const race = [0, 0, 0, 0, 0];
-            race[labels.race] = 1;
-            
-            return tf.tensor2d([[ageNorm, ...gender, ...race]]);
+        function encode(l) {
+            // Use square root scaling for age to reduce the range
+            const age = Math.sqrt(l.age / 100);
+            const gender = l.gender === 0 ? [1,0] : [0,1];
+            const race = [0,0,0,0,0];
+            race[l.race] = 1;
+            return [age, ...gender, ...race];
         }
 
-        // Train model
-        async function trainModel() {
+        async function train() {
             const files = document.getElementById('trainFiles').files;
-            if (files.length === 0) {
-                alert('Please select training images!');
+            const maxImg = parseInt(document.getElementById('maxImg').value);
+            const size = parseInt(document.getElementById('imgSize').value);
+            const epochs = parseInt(document.getElementById('epochs').value);
+            imgSize = size;
+            
+            if (!files.length) return alert('Select training folder');
+
+            const btn = document.getElementById('trainBtn');
+            const progress = document.getElementById('progress');
+            btn.disabled = true;
+            btn.textContent = 'Training...';
+            
+            // Show random GIF from Tenor
+            const gifContainer = document.getElementById('trainingGif');
+            const gifImage = document.getElementById('gifImage');
+            
+            try {
+                // Fetch random featured GIFs from Tenor
+                const response = await fetch(`https://tenor.googleapis.com/v2/featured?key=AIzaSyAyimkuYQYF_FXVALexPuGQctUWRURdCYQ&limit=50`);
+                const data = await response.json();
+                if (data.results && data.results.length > 0) {
+                    const randomIndex = Math.floor(Math.random() * data.results.length);
+                    gifImage.src = data.results[randomIndex].media_formats.gif.url;
+                    gifContainer.classList.add('active');
+                }
+            } catch (e) {
+                console.log('Could not load GIF');
+            }
+            
+            // Reset chart
+            lossData = { train: [], val: [] };
+            chart.data.labels = [];
+            chart.data.datasets[0].data = [];
+            chart.data.datasets[1].data = [];
+            chart.update();
+            
+            const showProgress = (text, pct) => {
+                progress.innerHTML = `<div class="progress-container">
+                    <div class="progress-header">
+                        <div class="progress-label">${text}</div>
+                        <div class="progress-percent">${pct.toFixed(0)}%</div>
+                    </div>
+                    <div class="progress-bar"><div class="progress-fill" style="width:${pct}%"></div></div>
+                </div>`;
+            };
+            
+            showProgress('Initializing model...', 0);
+            
+            if (model) model.dispose();
+            model = buildModel(size);
+            
+            const valid = Array.from(files).filter(f => f.type.startsWith('image/') && parseLabels(f.name));
+            const shuffled = valid.sort(() => Math.random() - 0.5).slice(0, maxImg);
+            
+            if (!shuffled.length) {
+                alert('No valid images');
+                btn.disabled = false;
+                btn.textContent = 'Start Training';
                 return;
             }
 
-            const trainBtn = document.getElementById('trainBtn');
-            const status = document.getElementById('trainStatus');
-            trainBtn.disabled = true;
-            trainBtn.textContent = '⏳ Training...';
-            
-            status.innerHTML = '<div class="status">Preparing data...</div>';
-            
-            const newModel = buildModel();
-            const trainData = [];
-            const trainLabels = [];
-            
-            // Load images (limit to 100 for speed)
-            for (let i = 0; i < Math.min(files.length, 100); i++) {
-                const file = files[i];
-                const labels = parseFilename(file.name);
+            const xs = [], ys = [];
+            for (let i = 0; i < shuffled.length; i++) {
+                const f = shuffled[i];
+                const tensor = await loadImg(f, size);
+                const labels = parseLabels(f.name);
+                xs.push(tensor);
+                ys.push(encode(labels));
                 
-                if (!labels) continue;
-                
-                const imgTensor = await preprocessImage(file);
-                const targetTensor = createTarget(labels);
-                
-                trainData.push(imgTensor);
-                trainLabels.push(targetTensor);
-                
-                if (i % 10 === 0) {
-                    status.innerHTML = `<div class="status">Loading image ${i + 1}/${Math.min(files.length, 100)}...</div>`;
+                if ((i + 1) % 50 === 0) {
+                    showProgress(`Loading images: ${i+1} / ${shuffled.length}`, ((i+1)/shuffled.length)*100);
+                    await tf.nextFrame();
                 }
             }
-            
-            if (trainData.length === 0) {
-                alert('No valid UTK Face images found! Check filename format.');
-                trainBtn.disabled = false;
-                trainBtn.textContent = '🚀 Start Training';
-                return;
-            }
 
-            status.innerHTML = `<div class="status">Training on ${trainData.length} images...</div>`;
+            showProgress('Preparing tensors...', 100);
+            await tf.nextFrame();
             
-            const xs = tf.concat(trainData);
-            const ys = tf.concat(trainLabels);
-            
-            trainData.forEach(t => t.dispose());
-            trainLabels.forEach(t => t.dispose());
+            const xTrain = tf.stack(xs);
+            const yTrain = tf.tensor2d(ys);
+            xs.forEach(t => t.dispose());
 
-            await newModel.fit(xs, ys, {
-                epochs: 20,
+            document.getElementById('currentEpoch').innerHTML = `0<span class="metric-unit">/ ${epochs}</span>`;
+
+            await model.fit(xTrain, yTrain, {
+                epochs,
                 batchSize: 32,
                 validationSplit: 0.2,
+                shuffle: true,
                 callbacks: {
-                    onEpochEnd: (epoch, logs) => {
-                        status.innerHTML = `<div class="status">Epoch ${epoch + 1}/20 | Loss: ${logs.loss.toFixed(4)}</div>`;
+                    onEpochEnd: async (epoch, logs) => {
+                        const pct = ((epoch+1)/epochs)*100;
+                        
+                        // Calculate age MAE separately
+                        const pred = model.predict(xTrain.slice([0,0,0,0], [Math.min(100, xTrain.shape[0]),size,size,3]));
+                        const predData = await pred.data();
+                        const trueData = await yTrain.slice([0,0], [Math.min(100, yTrain.shape[0]),1]).data();
+                        
+                        let sumError = 0;
+                        const sampleSize = Math.min(100, xTrain.shape[0]);
+                        for (let i = 0; i < sampleSize; i++) {
+                            const predAge = predData[i * 8] * 100;
+                            const trueAge = trueData[i] * 100;
+                            sumError += Math.abs(predAge - trueAge);
+                        }
+                        const ageMae = sumError / sampleSize;
+                        
+                        pred.dispose();
+                        
+                        showProgress(`Epoch ${epoch+1} / ${epochs}`, pct);
+                        
+                        // Update metrics
+                        document.getElementById('currentEpoch').innerHTML = `${epoch+1}<span class="metric-unit">/ ${epochs}</span>`;
+                        document.getElementById('ageMae').textContent = ageMae.toFixed(1) + ' yrs';
+                        document.getElementById('trainLoss').textContent = logs.loss.toFixed(4);
+                        
+                        // Update chart
+                        chart.data.labels.push(epoch + 1);
+                        chart.data.datasets[0].data.push(logs.loss);
+                        chart.data.datasets[1].data.push(logs.val_loss);
+                        chart.update('none');
+                        
+                        await tf.nextFrame();
+                    },
+                    onBatchEnd: async (batch) => {
+                        if (batch % 10 === 0) await tf.nextFrame();
                     }
                 }
             });
 
-            xs.dispose();
-            ys.dispose();
+            xTrain.dispose();
+            yTrain.dispose();
             
-            model = newModel;
-            trainBtn.textContent = '✅ Training Complete';
-            document.getElementById('predictBtn').disabled = false;
-            status.innerHTML = '<div class="status">✅ Model trained successfully!</div>';
+            // Hide dancing GIF
+            document.getElementById('trainingGif').classList.remove('active');
+            
+            btn.textContent = 'Start Training';
+            btn.disabled = false;
+            document.getElementById('predBtn').disabled = false;
+            document.getElementById('saveBtn').disabled = false;
+            document.getElementById('modelStatus').textContent = 'Model Active';
+            document.getElementById('modelStatus').classList.remove('inactive');
+            progress.innerHTML = '<div class="alert"><span class="alert-icon">✓</span><span>Training complete</span></div>';
         }
 
-        // Predict face
-        async function predictFace() {
-            if (!model) {
-                alert('Please train the model first!');
-                return;
+        async function saveModel() {
+            if (!model) return alert('No model to save');
+            await model.save('downloads://face-cnn');
+            alert('Model downloaded');
+        }
+
+        async function loadModel() {
+            const file = document.getElementById('loadFile').files[0];
+            if (!file) return;
+            
+            const progress = document.getElementById('progress');
+            progress.innerHTML = '<div class="alert"><span class="alert-icon">↻</span><span>Loading model...</span></div>';
+            
+            try {
+                const weights = await new Promise(resolve => {
+                    const inp = document.createElement('input');
+                    inp.type = 'file';
+                    inp.accept = '.bin';
+                    inp.onchange = e => resolve(e.target.files[0]);
+                    inp.click();
+                });
+                
+                if (!weights) return alert('Select weights file');
+                
+                const json = JSON.parse(await file.text());
+                imgSize = json.modelTopology.config.layers[0].config.batch_input_shape[1];
+                
+                if (model) model.dispose();
+                model = await tf.loadLayersModel(tf.io.browserFiles([file, weights]));
+                
+                document.getElementById('imgSize').value = imgSize;
+                document.getElementById('predBtn').disabled = false;
+                document.getElementById('saveBtn').disabled = false;
+                document.getElementById('modelStatus').textContent = 'Model Active';
+                document.getElementById('modelStatus').classList.remove('inactive');
+                progress.innerHTML = `<div class="alert"><span class="alert-icon">✓</span><span>Model loaded (${imgSize}×${imgSize})</span></div>`;
+            } catch (e) {
+                progress.innerHTML = `<div class="alert alert-warning"><span class="alert-icon">✕</span><span>Error: ${e.message}</span></div>`;
             }
+        }
+
+        async function predict() {
+            if (!model) return alert('Train or load a model first');
 
             const file = document.getElementById('testFile').files[0];
-            if (!file) {
-                alert('Please select an image!');
-                return;
-            }
+            if (!file) return alert('Select an image');
 
-            const imgTensor = await preprocessImage(file);
-            const pred = model.predict(imgTensor);
-            const values = await pred.data();
+            const tensor = await loadImg(file, imgSize);
+            const pred = model.predict(tensor.expandDims(0));
+            const vals = await pred.data();
             
-            const age = Math.round(values[0] * 100);
-            const gender = values[1] > values[2] ? 'Male' : 'Female';
-            const raceIdx = values.slice(3, 8).indexOf(Math.max(...values.slice(3, 8)));
+            // Reverse square root scaling for age
+            const age = Math.round(Math.max(0, Math.min(100, Math.pow(vals[0], 2) * 100)));
+            
+            const softmax = arr => {
+                const exp = arr.map(x => Math.exp(x));
+                const sum = exp.reduce((a,b) => a+b);
+                return exp.map(x => x/sum);
+            };
+            
+            const genderProbs = softmax([vals[1], vals[2]]);
+            const gender = genderProbs[0] > genderProbs[1] ? 'Male' : 'Female';
+            const genderConf = Math.max(...genderProbs) * 100;
+            
+            const raceProbs = softmax([vals[3], vals[4], vals[5], vals[6], vals[7]]);
+            const raceIdx = raceProbs.indexOf(Math.max(...raceProbs));
             const races = ['White', 'Black', 'Asian', 'Indian', 'Others'];
             const race = races[raceIdx];
+            const raceConf = raceProbs[raceIdx] * 100;
             
-            // Create image preview
             const reader = new FileReader();
-            reader.onload = (e) => {
+            reader.onload = e => {
+                const circumference = 2 * Math.PI * 34;
+                const createConfCircle = (conf) => {
+                    const offset = circumference - (conf / 100) * circumference;
+                    return `<svg class="confidence-bar" viewBox="0 0 80 80">
+                        <circle class="confidence-circle" cx="40" cy="40" r="34"/>
+                        <circle class="confidence-circle-fill" cx="40" cy="40" r="34" 
+                            stroke-dasharray="${circumference}" stroke-dashoffset="${offset}"/>
+                    </svg>
+                    <div class="confidence-text">${conf.toFixed(0)}%</div>`;
+                };
+                
                 document.getElementById('results').innerHTML = `
-                    <div class="results">
-                        <div>
-                            <img src="${e.target.result}" class="preview-img" alt="Input face">
-                        </div>
-                        <div>
-                            <div class="prediction-card">
-                                <div class="prediction-label">Age</div>
-                                <div class="prediction-value">${age} years</div>
-                            </div>
-                            <div class="prediction-card">
-                                <div class="prediction-label">Gender</div>
-                                <div class="prediction-value">${gender}</div>
-                            </div>
-                            <div class="prediction-card">
-                                <div class="prediction-label">Ethnicity</div>
-                                <div class="prediction-value">${race}</div>
+                    <div class="result-container">
+                        <div class="result-grid">
+                            <img src="${e.target.result}" class="result-image" alt="Input">
+                            <div class="predictions">
+                                <div class="prediction-card">
+                                    <div>
+                                        <div class="prediction-label">Age</div>
+                                        <div class="prediction-value">${age}</div>
+                                        <div class="prediction-confidence">years old</div>
+                                    </div>
+                                </div>
+                                <div class="prediction-card">
+                                    <div>
+                                        <div class="prediction-label">Gender</div>
+                                        <div class="prediction-value">${gender}</div>
+                                        <div class="prediction-confidence">Confidence: ${genderConf.toFixed(1)}%</div>
+                                    </div>
+                                    <div style="position:relative">
+                                        ${createConfCircle(genderConf)}
+                                    </div>
+                                </div>
+                                <div class="prediction-card">
+                                    <div>
+                                        <div class="prediction-label">Ethnicity</div>
+                                        <div class="prediction-value">${race}</div>
+                                        <div class="prediction-confidence">Confidence: ${raceConf.toFixed(1)}%</div>
+                                    </div>
+                                    <div style="position:relative">
+                                        ${createConfCircle(raceConf)}
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -385,7 +1012,7 @@
             };
             reader.readAsDataURL(file);
             
-            imgTensor.dispose();
+            tensor.dispose();
             pred.dispose();
         }
     </script>
