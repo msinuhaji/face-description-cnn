@@ -506,6 +506,11 @@
                     <span>Memory optimized: Start with 2000 images, 64px resolution</span>
                 </div>
                 
+                <div class="alert alert-warning">
+                    <span class="alert-icon">⚠</span>
+                    <span>Prevent your computer from sleeping during training!</span>
+                </div>
+                
                 <div class="field">
                     <label class="field-label">
                         Image Resolution
@@ -545,9 +550,10 @@
                 <div class="btn-group">
                     <button onclick="train()" id="trainBtn">Start Training</button>
                     <button onclick="saveModel()" id="saveBtn" disabled class="secondary">Save</button>
-                    <button onclick="document.getElementById('loadFile').click()" class="secondary">Load</button>
+                    <button onclick="document.getElementById('loadModelJson').click()" class="secondary">Load</button>
                 </div>
-                <input type="file" id="loadFile" accept=".json" onchange="loadModel()">
+                <input type="file" id="loadModelJson" accept=".json" style="display:none;">
+                <input type="file" id="loadModelWeights" accept=".bin" style="display:none;">
                 
                 <div id="progress"></div>
             </div>
@@ -865,6 +871,17 @@
             btn.disabled = true;
             btn.textContent = 'Training...';
             
+            // Request wake lock to prevent sleep during training
+            let wakeLock = null;
+            try {
+                if ('wakeLock' in navigator) {
+                    wakeLock = await navigator.wakeLock.request('screen');
+                    console.log('Wake Lock active - screen will stay awake');
+                }
+            } catch (err) {
+                console.warn('Wake Lock not supported:', err);
+            }
+            
             chart.data.labels = [];
             chart.data.datasets[0].data = [];
             chart.data.datasets[1].data = [];
@@ -1022,6 +1039,12 @@
             xTrain.dispose();
             yTrain.dispose();
             
+            // Release wake lock
+            if (wakeLock) {
+                await wakeLock.release();
+                console.log('Wake Lock released');
+            }
+            
             btn.textContent = 'Start Training';
             btn.disabled = false;
             document.getElementById('predBtn').disabled = false;
@@ -1033,42 +1056,65 @@
 
         async function saveModel() {
             if (!model) return alert('No model to save');
-            await model.save('downloads://face-cnn-optimized');
-            alert('Model downloaded');
-        }
-
-        async function loadModel() {
-            const file = document.getElementById('loadFile').files[0];
-            if (!file) return;
             
             const progress = document.getElementById('progress');
-            progress.innerHTML = '<div class="alert"><span class="alert-icon">↻</span><span>Loading model...</span></div>';
+            progress.innerHTML = '<div class="alert alert-info"><span class="alert-icon">↻</span><span>Saving model...</span></div>';
             
             try {
-                const weights = await new Promise(resolve => {
-                    const inp = document.createElement('input');
-                    inp.type = 'file';
-                    inp.accept = '.bin';
-                    inp.onchange = e => resolve(e.target.files[0]);
-                    inp.click();
-                });
+                await model.save('downloads://face-cnn-optimized');
+                progress.innerHTML = '<div class="alert"><span class="alert-icon">✓</span><span>Model saved! Two files downloaded: model.json and model.weights.bin</span></div>';
+            } catch (e) {
+                progress.innerHTML = `<div class="alert alert-warning"><span class="alert-icon">✕</span><span>Save error: ${e.message}</span></div>`;
+            }
+        }
+
+        // Setup load model handlers
+        document.getElementById('loadModelJson').addEventListener('change', async (e) => {
+            const jsonFile = e.target.files[0];
+            if (!jsonFile) return;
+            
+            const progress = document.getElementById('progress');
+            progress.innerHTML = '<div class="alert alert-info"><span class="alert-icon">↻</span><span>Select the weights file (.bin)...</span></div>';
+            
+            // Trigger weights file selection
+            const weightsInput = document.getElementById('loadModelWeights');
+            weightsInput.onchange = async (evt) => {
+                const weightsFile = evt.target.files[0];
+                if (!weightsFile) {
+                    progress.innerHTML = '<div class="alert alert-warning"><span class="alert-icon">✕</span><span>Weights file required</span></div>';
+                    return;
+                }
                 
-                if (!weights) return alert('Select weights file');
+                await loadModel(jsonFile, weightsFile);
                 
-                const json = JSON.parse(await file.text());
+                // Reset inputs
+                e.target.value = '';
+                evt.target.value = '';
+            };
+            
+            weightsInput.click();
+        });
+
+        async function loadModel(jsonFile, weightsFile) {
+            const progress = document.getElementById('progress');
+            progress.innerHTML = '<div class="alert alert-info"><span class="alert-icon">↻</span><span>Loading model...</span></div>';
+            
+            try {
+                const json = JSON.parse(await jsonFile.text());
                 imgSize = json.modelTopology.config.layers[0].config.batch_input_shape[1];
                 
                 if (model) model.dispose();
-                model = await tf.loadLayersModel(tf.io.browserFiles([file, weights]));
+                model = await tf.loadLayersModel(tf.io.browserFiles([jsonFile, weightsFile]));
                 
                 document.getElementById('imgSize').value = imgSize;
                 document.getElementById('predBtn').disabled = false;
                 document.getElementById('saveBtn').disabled = false;
                 document.getElementById('modelStatus').textContent = 'Model Active';
                 document.getElementById('modelStatus').classList.remove('inactive');
-                progress.innerHTML = `<div class="alert"><span class="alert-icon">✓</span><span>Model loaded (${imgSize}×${imgSize})</span></div>`;
+                progress.innerHTML = `<div class="alert"><span class="alert-icon">✓</span><span>Model loaded successfully (${imgSize}×${imgSize})</span></div>`;
             } catch (e) {
-                progress.innerHTML = `<div class="alert alert-warning"><span class="alert-icon">✕</span><span>Error: ${e.message}</span></div>`;
+                progress.innerHTML = `<div class="alert alert-warning"><span class="alert-icon">✕</span><span>Load error: ${e.message}</span></div>`;
+                console.error('Model load error:', e);
             }
         }
 
