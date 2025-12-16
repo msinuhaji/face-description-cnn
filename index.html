@@ -717,6 +717,56 @@
 
         function buildModel(size) {
             const m = tf.sequential();
+            
+            // Deeper architecture with more filters
+            m.add(tf.layers.conv2d({ inputShape: [size, size, 3], filters: 64, kernelSize: 3, activation: 'relu', padding: 'same' }));
+            m.add(tf.layers.batchNormalization());
+            m.add(tf.layers.conv2d({ filters: 64, kernelSize: 3, activation: 'relu', padding: 'same' }));
+            m.add(tf.layers.batchNormalization());
+            m.add(tf.layers.maxPooling2d({ poolSize: 2 }));
+            m.add(tf.layers.dropout({ rate: 0.25 }));
+            
+            m.add(tf.layers.conv2d({ filters: 128, kernelSize: 3, activation: 'relu', padding: 'same' }));
+            m.add(tf.layers.batchNormalization());
+            m.add(tf.layers.conv2d({ filters: 128, kernelSize: 3, activation: 'relu', padding: 'same' }));
+            m.add(tf.layers.batchNormalization());
+            m.add(tf.layers.maxPooling2d({ poolSize: 2 }));
+            m.add(tf.layers.dropout({ rate: 0.25 }));
+            
+            m.add(tf.layers.conv2d({ filters: 256, kernelSize: 3, activation: 'relu', padding: 'same' }));
+            m.add(tf.layers.batchNormalization());
+            m.add(tf.layers.conv2d({ filters: 256, kernelSize: 3, activation: 'relu', padding: 'same' }));
+            m.add(tf.layers.batchNormalization());
+            m.add(tf.layers.maxPooling2d({ poolSize: 2 }));
+            m.add(tf.layers.dropout({ rate: 0.3 }));
+            
+            m.add(tf.layers.conv2d({ filters: 512, kernelSize: 3, activation: 'relu', padding: 'same' }));
+            m.add(tf.layers.batchNormalization());
+            m.add(tf.layers.maxPooling2d({ poolSize: 2 }));
+            m.add(tf.layers.dropout({ rate: 0.3 }));
+            
+            m.add(tf.layers.flatten());
+            m.add(tf.layers.dense({ units: 1024, activation: 'relu' }));
+            m.add(tf.layers.batchNormalization());
+            m.add(tf.layers.dropout({ rate: 0.5 }));
+            m.add(tf.layers.dense({ units: 512, activation: 'relu' }));
+            m.add(tf.layers.batchNormalization());
+            m.add(tf.layers.dropout({ rate: 0.4 }));
+            m.add(tf.layers.dense({ units: 8 }));
+            
+            m.compile({
+                optimizer: tf.train.adam(0.0005),
+                loss: (yTrue, yPred) => tf.tidy(() => {
+                    const ageLoss = tf.losses.meanSquaredError(yTrue.slice([0,0],[-1,1]), yPred.slice([0,0],[-1,1]));
+                    const genderLoss = tf.losses.softmaxCrossEntropy(yTrue.slice([0,1],[-1,2]), yPred.slice([0,1],[-1,2]));
+                    const raceLoss = tf.losses.softmaxCrossEntropy(yTrue.slice([0,3],[-1,5]), yPred.slice([0,3],[-1,5]));
+                    return ageLoss.mul(15).add(genderLoss.mul(2)).add(raceLoss.mul(2)).div(19);
+                }),
+                metrics: ['mae']
+            });
+            return m;
+        }
+            const m = tf.sequential();
             m.add(tf.layers.conv2d({ inputShape: [size, size, 3], filters: 32, kernelSize: 3, activation: 'relu', padding: 'same' }));
             m.add(tf.layers.batchNormalization());
             m.add(tf.layers.maxPooling2d({ poolSize: 2 }));
